@@ -14,7 +14,7 @@ async function start() {
   const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }) });
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', async (update) => {
-    const { qr, connection } = u;
+    const { qr, connection } = update;
     if (!sock.authState.creds.registered) {
   const code = await sock.requestPairingCode(process.env.TARGET_NUMBER);
   console.log('PAIRING CODE:', code);
