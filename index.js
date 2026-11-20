@@ -1,6 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
-const app = express();
+const http = require('http');
 const PORT = process.env.PORT || 10000;
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
@@ -11,8 +10,7 @@ console.log("Starting bot, token exists:", !!TOKEN, "chat exists:", !!CHAT_ID, "
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-app.get('/', (req, res) => res.send('Bot is running'));
-app.listen(PORT, () => console.log(`Port open on ${PORT}`));
+http.createServer((req, res) => { res.end('Bot is running'); }).listen(PORT, () => console.log(`Port open on ${PORT}`));
 
 // /start
 bot.onText(/\/start/, (msg) => {
@@ -35,17 +33,15 @@ bot.onText(/\/analyze (.+)/, (msg, match) => {
     }
     const [diff, last5H, h2h, last5A, paceH, paceA] = nums;
 
-    // Get team names - everything before first number
     const teamPart = text.split(/\d/)[0].trim() || "Match";
 
     const avgTotal = (last5H + last5A + h2h) / 3;
     const paceAvg = (paceH + paceA) / 2;
 
-    // V2 Score
     let score = 50;
-    score += (diff - 50) * 0.6; // difficulty weight
-    score += (avgTotal - 155) * 0.4; // scoring trend
-    score += (paceAvg - 100) * 0.2; // pace
+    score += (diff - 50) * 0.6;
+    score += (avgTotal - 155) * 0.4;
+    score += (paceAvg - 100) * 0.2;
     score = Math.min(92, Math.max(25, Math.round(score)));
 
     const line = avgTotal >= 156 ? "OVER 155.5" : "UNDER 155.5";
@@ -57,3 +53,6 @@ bot.onText(/\/analyze (.+)/, (msg, match) => {
   } catch (e) {
     bot.sendMessage(msg.chat.id, "Error: " + e.message);
   }
+});
+
+bot.on('polling_error', (e) => console.log("Polling error:", e.message));
