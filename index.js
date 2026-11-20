@@ -28,8 +28,7 @@ async function get(url, key) {
     return j.response || [];
   } catch (e) { console.log("API ERR " + e.message); return []; }
 }
-function today() { return new Date().toISOString().split('T')[0]; }
-async function foot(c) {
+function today() { return new Date().toISOString().split('T')[0]; }async function foot(c) {
   var g = await get("https://v3.football.api-sports.io/fixtures?date=" + today() + "&status=NS", FOOT_KEY);
   var f = 0;
   for (var i = 0; i < Math.min(g.length, 30); i++) {
@@ -66,4 +65,30 @@ async function tennis(c) {
   }
   if (f === 0) await send("Tennis: checked " + g.length + " games, no strong pick", c);
 }
-async function runAll(c)
+async function runAll(c) {
+  await send("SCAN STARTING...", c);
+  await foot(c); await basket(c); await tennis(c);
+}bot.onText(/\/start/, (m) => bot.sendMessage(m.chat.id, "Connected! ID: " + m.chat.id));bot.onText(/\/analyze (.+)/, (m, match) => {
+var nums = (match[1].match(/\d+/g) || []).map(Number);
+if (nums.length < 6) return bot.sendMessage(m.chat.id, "Use: /analyze 80 230 225 220 102 101");
+var r = calc(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], 155);
+var line = r.avg >= 156 ? "OVER 155.5" : "UNDER 155.5";
+var v = r.s >= 68 ? "PLAY" : r.s >= 58 ? "SMALL PLAY" : "SKIP";
+bot.sendMessage(m.chat.id, "ANALYSIS\n" + line + "\nChance: " + r.s + "%\nAvg: " + r.avg.toFixed(1) + "\n" + v);
+});
+bot.onText(/\/test/, (m) => bot.sendMessage(m.chat.id, "TEST OK - Man City vs Arsenal OVER 2.5 78%"));
+bot.onText(/\/scan/, (m) => { bot.sendMessage(m.chat.id, "Scan started... 30 secs"); runAll(m.chat.id); }); bot.onText(/\/analyze (.+)/, (m, match) => {
+var nums = (match[1].match(/\d+/g) || []).map(Number);
+if (nums.length < 6) return bot.sendMessage(m.chat.id, "Use: /analyze 80 230 225 220 102 101");
+var r = calc(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], 155);
+var line = r.avg >= 156 ? "OVER 155.5" : "UNDER 155.5";
+var v = r.s >= 68 ? "PLAY" : r.s >= 58 ? "SMALL PLAY" : "SKIP";
+bot.sendMessage(m.chat.id, "ANALYSIS\n" + line + "\nChance: " + r.s + "%\nAvg: " + r.avg.toFixed(1) + "\n" + v);
+});
+bot.onText(/\/football/, (m) => foot(m.chat.id));
+bot.onText(/\/basketball/, (m) => basket(m.chat.id));
+bot.onText(/\/tennis/, (m) => tennis(m.chat.id)); cron.schedule('0 8 * * *', () => runAll(), { timezone: "Africa/Lagos" });
+cron.schedule('0 12 * * *', () => runAll(), { timezone: "Africa/Lagos" });
+cron.schedule('0 16 * * *', () => runAll(), { timezone: "Africa/Lagos" });
+bot.on('polling_error', (e) => console.log("Polling: " + e.message));
+console.log("Auto bot ready");
