@@ -1,53 +1,53 @@
-const http = require('http');
-http.createServer((req,res)=>{res.writeHead(200);res.end('Bot is running');}).listen(process.env.PORT || 3000, '0.0.0.0');
-require('dotenv').config();
-const axios = require('axios');
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const pino = require('pino');
+const { Telegraf } = require('telegraf');
 
-const API_KEY = process.env.API_KEY;
-const TARGET = process.env.TARGET_NUMBER;
+const TOKEN = process.env.TELEGRAM_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState('auth');
-  const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }) });
-  sock.ev.on('creds.update', saveCreds);
-
-  let pairingCodeRequested = false;
-
-  sock.ev.on('connection.update', async (update) => {
-    const { qr, connection } = update;
-
-    if (qr && !sock.authState.creds.registered && !pairingCodeRequested) {
-        pairingCodeRequested = true;
-        try {
-            const code = await sock.requestPairingCode(TARGET);
-            console.log('PAIRING CODE:', code);
-        } catch (e) {
-            console.log('Pairing error:', e.message);
-            pairingCodeRequested = false;
-        }
-    }
-
-    if (connection === 'open') { 
-        console.log('READY - Bot is online'); 
-        checkMatches(sock); 
-        setInterval(() => checkMatches(sock), 10*60*1000); 
-    }
-  });
+if (!TOKEN) {
+  console.log('Missing TELEGRAM_TOKEN');
+  process.exit(1);
 }
 
-async function checkMatches(sock) {
+const bot = new Telegraf(TOKEN);
+
+let targetChatId = CHAT_ID || null;
+
+bot.start((ctx) => {
+  targetChatId = ctx.chat.id.toString();
+  console.log('New chat ID:', targetChatId);
+  ctx.reply(`✅ OverUnder Bot connected!\n\nYour Chat ID is:\n${targetChatId}\n\nCopy this and put it in Render as TELEGRAM_CHAT_ID, then redeploy.`);
+});
+
+bot.command('test', async (ctx) => {
+  await ctx.reply('✅ Test OK - Bot is working!\nOver/Under alerts will come here.');
+});
+
+bot.command('status', async (ctx) => {
+  await ctx.reply('🟢 Bot is online and watching for Over/Under signals.');
+});
+
+// Send alert function - your Over/Under logic goes here
+async function sendAlert(message) {
+  if (!targetChatId) {
+    console.log('No CHAT_ID yet - user must send /start first');
+    return;
+  }
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const res = await axios.get(`https://v3.football.api-sports.io/fixtures?date=${today}`, { headers: { 'x-apisports-key': API_KEY } });
-    const fixtures = res.data.response || [];
-    console.log(`Found ${fixtures.length} fixtures`);
-    for (const f of fixtures.slice(0, 5)) {
-      const msg = `⚽ *Over/Under Tip*\n\n${f.teams.home.name} vs ${f.teams.away.name}\nLeague: ${f.league.name}\nTime: ${f.fixture.date}`;
-      await sock.sendMessage(TARGET + '@s.whatsapp.net', { text: msg });
-      await new Promise(r => setTimeout(r, 2000));
-    }
-  } catch (e) { console.log('Error:', e.message); }
+    await bot.telegram.sendMessage(targetChatId, message);
+    console.log('Alert sent:', message);
+  } catch (e) {
+    console.log('Send failed:', e.message);
+  }
 }
-start();
+
+// Example: Test alert every 60 seconds until you add real logic
+// Remove this later
+setInterval(() => {
+  console.log('Bot alive - waiting for signals...');
+}, 60000);
+
+bot.launch();
+console.log('TELEGRAM BOT ONLINE');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
