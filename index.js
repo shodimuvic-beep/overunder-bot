@@ -15,7 +15,10 @@ async function start() {
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', (u) => {
     const { qr, connection } = u;
-    if (qr) { console.log('SCAN THIS QR:'); qrcode.generate(qr, { small: true }); }
+    if (!sock.authState.creds.registered) {
+  const code = await sock.requestPairingCode(process.env.TARGET_NUMBER);
+  console.log('PAIRING CODE:', code);
+}
     if (connection === 'open') { console.log('READY - Bot is online'); checkMatches(sock); setInterval(() => checkMatches(sock), 10*60*1000); }
   });
 }
