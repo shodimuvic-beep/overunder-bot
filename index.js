@@ -13,7 +13,7 @@ async function start() {
   const { state, saveCreds } = await useMultiFileAuthState('auth');
   const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }) });
   sock.ev.on('creds.update', saveCreds);
-  sock.ev.on('connection.update', (u) => {
+  sock.ev.on('connection.update', async (update) => {
     const { qr, connection } = u;
     if (!sock.authState.creds.registered) {
   const code = await sock.requestPairingCode(process.env.TARGET_NUMBER);
