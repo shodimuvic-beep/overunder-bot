@@ -54,5 +54,3 @@ bot.onText(/\/analyze (.+)/, (msg, match) => {
     bot.sendMessage(msg.chat.id, "Error: " + e.message);
   }
 });
-
-bot.on('polling_error', (e) => console.log("Polling error:", e.message));
