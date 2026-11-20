@@ -3,7 +3,6 @@ http.createServer((req,res)=>{res.writeHead(200);res.end('Bot is running');}).li
 require('dotenv').config();
 const axios = require('axios');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
 const API_KEY = process.env.API_KEY;
@@ -13,13 +12,28 @@ async function start() {
   const { state, saveCreds } = await useMultiFileAuthState('auth');
   const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }) });
   sock.ev.on('creds.update', saveCreds);
+
+  let pairingCodeRequested = false;
+
   sock.ev.on('connection.update', async (update) => {
     const { qr, connection } = update;
-    if (!sock.authState.creds.registered) {
-  const code = await sock.requestPairingCode(process.env.TARGET_NUMBER);
-  console.log('PAIRING CODE:', code);
-}
-    if (connection === 'open') { console.log('READY - Bot is online'); checkMatches(sock); setInterval(() => checkMatches(sock), 10*60*1000); }
+
+    if (qr && !sock.authState.creds.registered && !pairingCodeRequested) {
+        pairingCodeRequested = true;
+        try {
+            const code = await sock.requestPairingCode(TARGET);
+            console.log('PAIRING CODE:', code);
+        } catch (e) {
+            console.log('Pairing error:', e.message);
+            pairingCodeRequested = false;
+        }
+    }
+
+    if (connection === 'open') { 
+        console.log('READY - Bot is online'); 
+        checkMatches(sock); 
+        setInterval(() => checkMatches(sock), 10*60*1000); 
+    }
   });
 }
 
