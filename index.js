@@ -1,57 +1,35 @@
 const { Telegraf } = require('telegraf');
+const express = require('express');
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-if (!TOKEN) {
-  console.log('Missing TELEGRAM_TOKEN');
-  process.exit(1);
-}
+console.log('Starting bot, token exists:', !!TOKEN);
 
 const bot = new Telegraf(TOKEN);
 
-let targetChatId = CHAT_ID || null;
+// Log EVERY message - so we can see in Render if Telegram reaches us
+bot.on('message', (ctx) => {
+  console.log('Got message:', ctx.message.text, 'from chat:', ctx.chat.id);
+});
 
 bot.start((ctx) => {
-  targetChatId = ctx.chat.id.toString();
-  console.log('New chat ID:', targetChatId);
-  ctx.reply(`✅ OverUnder Bot connected!\n\nYour Chat ID is:\n${targetChatId}\n\nCopy this and put it in Render as TELEGRAM_CHAT_ID, then redeploy.`);
+  console.log('START command from:', ctx.chat.id);
+  return ctx.reply(`✅ OverUnder Bot connected!\n\nYour Chat ID is:\n${ctx.chat.id}\n\nCopy this and put it in Render as TELEGRAM_CHAT_ID`);
 });
 
-bot.command('test', async (ctx) => {
-  await ctx.reply('✅ Test OK - Bot is working!\nOver/Under alerts will come here.');
+bot.command('test', (ctx) => {
+  return ctx.reply('✅ Test OK - Bot is working!');
 });
 
-bot.command('status', async (ctx) => {
-  await ctx.reply('🟢 Bot is online and watching for Over/Under signals.');
-});
+bot.launch({ dropPendingUpdates: true }).then(() => {
+  console.log('TELEGRAM BOT ONLINE - polling started');
+}).catch(e => console.log('Launch failed:', e.message));
 
-// Send alert function - your Over/Under logic goes here
-async function sendAlert(message) {
-  if (!targetChatId) {
-    console.log('No CHAT_ID yet - user must send /start first');
-    return;
-  }
-  try {
-    await bot.telegram.sendMessage(targetChatId, message);
-    console.log('Alert sent:', message);
-  } catch (e) {
-    console.log('Send failed:', e.message);
-  }
-}
-
-// Example: Test alert every 60 seconds until you add real logic
-// Remove this later
-setInterval(() => {
-  console.log('Bot alive - waiting for signals...');
-}, 60000);
-
-bot.launch();
-console.log('TELEGRAM BOT ONLINE');
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-const express = require('express');
+// Keep Render port open
 const app = express();
 app.get('/', (req, res) => res.send('Bot is online'));
 app.listen(process.env.PORT || 10000, () => console.log('Port open'));
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
