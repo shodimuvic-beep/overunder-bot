@@ -1,5 +1,5 @@
 const http = require('http');
-http.createServer((req,res)=>{res.writeHead(200);res.end('Bot is running');}).listen(process.env.PORT || 3000);
+http.createServer((req,res)=>{res.writeHead(200);res.end('Bot is running');}).listen(process.env.PORT || 3000, '0.0.0.0');
 require('dotenv').config();
 const axios = require('axios');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
