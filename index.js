@@ -51,3 +51,7 @@ console.log('TELEGRAM BOT ONLINE');
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+const express = require('express');
+const app = express();
+app.get('/', (req, res) => res.send('Bot is online'));
+app.listen(process.env.PORT || 10000, () => console.log('Port open'));
