@@ -24,3 +24,5 @@ bot.onText(/\/start/, (msg) => {
   }
   bot.sendMessage(msg.chat.id, "MANUAL PICK\n\n" + home + " vs " + away + "\nOdds: " + p[1].trim() + "\n\nPick: " + pick + "\n\nSend next game.");
 });
+const http = require('http');
+http.createServer((req,res)=>{res.end('Bot is running');}).listen(process.env.PORT || 10000);
