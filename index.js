@@ -1,41 +1,26 @@
 const TelegramBot = require('node-telegram-bot-api');
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+console.log("Bot running...");
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-if (!TOKEN) {
-  console.log("Missing TELEGRAM_BOT_TOKEN");
-  process.exit(1);
-}
-
-const bot = new TelegramBot(TOKEN, { polling: true });
-console.log("Bot is running...");
-
-// ---------- HELPERS ----------
-function analyzeFootball(home, away, h, d, a) {
-  let pick = "", reason = "", confidence = "Medium";
-  if (a < h && a < d) {
-    pick = `AWAY WIN - ${away} @ ${a}`;
-    reason = `${away} is favourite. Away odds lowest.`;
-    confidence = a < 1.8 ? "High" : "Medium";
-  } else if (h < a && h < d) {
-    pick = `HOME WIN - ${home} @ ${h}`;
-    reason = `${home} is favourite. Home odds lowest.`;
-    confidence = h < 1.8 ? "High" : "Medium";
+bot.onText(/\/start/, (msg) => {
+  bot.sendMessage(msg.chat.id, "Send: Team vs Team - Odds\nExample: Rans vs Persipura - 2.90 / 3.60 / 2.24");
+});bot.on('message', (msg) => {
+  if (!msg.text) return;
+  let t = msg.text.trim();
+  if (t.startsWith('/')) return;
+  if (!t.toLowerCase().includes('vs')) return;
+  let p = t.split('-');
+  let teams = p[0].split(/vs/i);
+  let home = teams[0].trim();
+  let away = teams[1].trim();
+  let o = p[1].split('/').map(x => parseFloat(x.trim()));
+  let pick = "";
+  if (o.length === 3) {
+    if (o[2] < o[0]) pick = "AWAY WIN - " + away + " @ " + o[2];
+    else if (o[0] < o[2]) pick = "HOME WIN - " + home + " @ " + o[0];
+    else pick = "DRAW @ " + o[1];
   } else {
-    pick = `DRAW @ ${d} - Value pick`;
-    reason = `Odds are very close, bookies expect a tight game.`;
-    confidence = "Low";
+    pick = (o[0] < o[1] ? home : away) + " WIN @ " + Math.min(o[0], o[1]);
   }
-
-  // Safety tip for close odds
-  let safety = "";
-  if (Math.abs(h - a) < 0.8) {
-    safety = `\n🛡️ Safety: Odds are close, consider Double Chance 1X or X2 instead of straight win.`;
-  }
-
-  return `⚽ ${home} vs ${away}\nOdds: ${h} / ${d} / ${a}\n\n🎯 Pick: ${pick}\n📊 Confidence: ${confidence}\n💡 Why: ${reason}${safety}\n⚠️ Avoid: Going all-in on 1X2 when odds are close.`;
-}
-
-function analyze2Way(home, away, h, a, emoji) {
-  let fav = h < a ? home : away;
-  let favOdd = Math.min(h, a);
-  return `${emoji} ${home} vs ${away}\nOdds: ${h} / ${a}\n\n🎯 Pick: ${fav} WIN @ ${favOdd}\n📊 Confidence: ${favOdd < 1.70 ? "High" : "Medium"}\n💡 Why: ${fav} is favourite with lower odds.\n🛡️ Safety: If odds are 1.90 / 1.90,
+  bot.sendMessage(msg.chat.id, "MANUAL PICK\n\n" + home + " vs " + away + "\nOdds: " + p[1].trim() + "\n\nPick: " + pick + "\n\nSend next game.");
+});
